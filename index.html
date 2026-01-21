@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <title>Personal Flashcard Software</title>
+    <link rel="stylesheet" href="style.css">
+
+   
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Personal Flashcard Software</h1>
+            <p>Your ultimate study companion with cloud sync</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('folders')">📁 Folders</button>
+            <button class="nav-tab" onclick="showTab('create')">➕ Create</button>
+            <button class="nav-tab" onclick="showTab('study')">📚 Study</button>
+            <button class="nav-tab" onclick="showTab('sync')">☁️ Cloud Sync</button>
+        </div>
+
+        <!-- Folders Tab -->
+        <div id="folders" class="tab-content active">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>My Study Folders</h2>
+                <button class="btn btn-primary" onclick="createNewFolder()">+ New Folder</button>
+            </div>
+            <div id="folders-grid" class="card-grid"></div>
+        </div>
+
+        <!-- Create Tab -->
+        <div id="create" class="tab-content">
+            <h2>Create Flashcards</h2>
+            <div class="input-group">
+                <label for="folder-select">Select Folder:</label>
+                <select id="folder-select">
+                    <option value="">Select a folder...</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="deck-name">Deck Name:</label>
+                <input type="text" id="deck-name" placeholder="Enter deck name...">
+            </div>
+            <div class="input-group">
+                <label for="card-front">Front (Question):</label>
+                <textarea id="card-front" rows="3" placeholder="Enter question or prompt..."></textarea>
+            </div>
+            <div class="input-group">
+                <label for="card-back">Back (Answer):</label>
+                <textarea id="card-back" rows="3" placeholder="Enter answer or explanation..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="addCard()">Add Card</button>
+                <button class="btn btn-secondary" onclick="clearCardForm()">Clear</button>
+            </div>
+            <div id="current-deck" style="margin-top: 30px;"></div>
+        </div>
+
+        <!-- Study Tab -->
+        <div id="study" class="tab-content">
+            <h2>Study Mode</h2>
+            <div class="input-group">
+                <label for="study-deck-select">Select Deck to Study:</label>
+                <select id="study-deck-select" onchange="loadStudyDeck()">
+                    <option value="">Choose a deck...</option>
+                </select>
+            </div>
+            
+            <div id="study-modes" style="display: none;">
+                <h3>Choose Study Mode:</h3>
+                <div class="study-controls">
+                    <button class="btn btn-primary" onclick="startFlashcardMode()">📚 Flashcards</button>
+                    <button class="btn btn-primary" onclick="startQuizMode()">🧠 Quiz</button>
+                    <button class="btn btn-primary" onclick="startMatchMode()">🎯 Match</button>
+                    <button class="btn btn-primary" onclick="startWriteMode()">✍️ Write</button>
+                </div>
+            </div>
+
+            <div id="study-area"></div>
+        </div>
+
+        <!-- Cloud Sync Tab -->
+        <div id="sync" class="tab-content">
+            <h2>Cloud Storage Sync</h2>
+            <div class="cloud-sync">
+                <h3 style="color: white; margin-bottom: 15px;">Connect Your Cloud Storage</h3>
+                <p style="color: rgba(255,255,255,0.8); margin-bottom: 20px;">
+                    Sync your flashcards across all your devices by connecting to your preferred cloud storage.
+                </p>
+                
+                <div class="cloud-providers">
+                    <div class="cloud-provider" onclick="connectCloud('dropbox')">
+                        <h4>📦 Dropbox</h4>
+                        <p>Sync with Dropbox</p>
+                        <span id="dropbox-status">Not Connected</span>
+                    </div>
+                    <div class="cloud-provider" onclick="connectCloud('googledrive')">
+                        <h4>📁 Google Drive</h4>
+                        <p>Sync with Google Drive</p>
+                        <span id="googledrive-status">Not Connected</span>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-primary" onclick="saveToGoogleDrive()">💾 Save</button>
+                            <button class="btn btn-secondary" onclick="loadFromGoogleDrive()">📥 Load</button>
+                        </div>
+                    </div>
+                    <div class="cloud-provider" onclick="connectCloud('onedrive')">
+                        <h4>☁️ OneDrive</h4>
+                        <p>Sync with OneDrive</p>
+                        <span id="onedrive-status">Not Connected</span>
+                    </div>
+                    <div class="cloud-provider" onclick="connectCloud('icloud')">
+                        <h4>🍎 iCloud</h4>
+                        <p>Sync with iCloud</p>
+                        <span id="icloud-status">Not Connected</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <h3 style="color: white; margin-bottom: 15px;">Import/Export</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="exportData()">📤 Export Data</button>
+                        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData()">
+                        <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📥 Import Data</button>
+                        <button class="btn btn-primary" onclick="syncAll()">🔄 Sync All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="folder-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeFolderModal()">&times;</span>
+            <h2>Create New Folder</h2>
+            <div class="input-group">
+                <label for="new-folder-name">Folder Name:</label>
+                <input type="text" id="new-folder-name" placeholder="Enter folder name...">
+            </div>
+            <div class="input-group">
+                <label for="folder-description">Description (optional):</label>
+                <textarea id="folder-description" rows="3" placeholder="Describe what this folder is for..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="saveFolderModal()">Create Folder</button>
+        </div>
+    </div>
+
+    <script>
+        // Data structure
+        let appData = {
+            folders: [],
+            currentStudyDeck: null,
+            currentStudyMode: null,
+            currentCardIndex: 0,
+            studyStats: {
+                correct: 0,
+                incorrect: 0,
+                total: 0
+            },
+            cloudConnections: {
+                dropbox: false,
+                googledrive: false,
+                onedrive: false,
+                icloud: false
+            }
+        };
+
+        // Initialize app
+        function initApp() {
+            loadData();
+            updateFoldersDisplay();
+            updateFolderSelects();
+        }
+
+        // Tab management
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Folder management
+        function createNewFolder() {
+            document.getElementById('folder-modal').style.display = 'block';
+        }
+
+        function closeFolderModal() {
+            document.getElementById('folder-modal').style.display = 'none';
+            document.getElementById('new-folder-name').value = '';
+            document.getElementById('folder-description').value = '';
+        }
+
+        function saveFolderModal() {
+            const name = document.getElementById('new-folder-name').value.trim();
+            const description = document.getElementById('folder-description').value.trim();
+            
+            if (!name) {
+                alert('Please enter a folder name');
+                return;
+            }
+
+            const folder = {
+                id: Date.now(),
+                name: name,
+                description: description,
+                decks: [],
+                created: new Date().toISOString()
+            };
+
+            appData.folders.push(folder);
+            saveData();
+            updateFoldersDisplay();
+            updateFolderSelects();
+            closeFolderModal();
+        }
+
+        function updateFoldersDisplay() {
+            const grid = document.getElementById('folders-grid');
+            grid.innerHTML = '';
+
+            appData.folders.forEach(folder => {
+                const folderCard = document.createElement('div');
+                folderCard.className = 'folder-card';
+                folderCard.innerHTML = `
+                    <h3>📁 ${folder.name}</h3>
+                    <p>${folder.description || 'No description'}</p>
+                    <div style="margin-top: 15px;">
+                        <small>📚 ${folder.decks.length} deck(s)</small>
+                        <small style="margin-left: 15px;">📅 ${new Date(folder.created).toLocaleDateString()}</small>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-secondary" onclick="viewFolder(${folder.id})">View Decks</button>
+                        <button class="btn btn-danger" onclick="deleteFolder(${folder.id})" style="margin-left: 10px;">Delete</button>
+                    </div>
+                `;
+                grid.appendChild(folderCard);
+            });
+
+            if (appData.folders.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #666; margin: 40px 0;">No folders created yet. Create your first folder to get started!</p>';
+            }
+        }
+
+        function viewFolder(folderId) {
+            const folder = appData.folders.find(f => f.id === folderId);
+            if (!folder) return;
+
+            const grid = document.getElementById('folders-grid');
+            grid.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-secondary" onclick="updateFoldersDisplay()">← Back to Folders</button>
+                    <h2 style="margin: 20px 0;">📁 ${folder.name}</h2>
+                    <p>${folder.description}</p>
+                </div>
+                <div class="card-grid" id="deck-grid"></div>
+            `;
+
+            const deckGrid = document.getElementById('deck-grid');
+            folder.decks.forEach(deck => {
+                const deckCard = document.createElement('div');
+                deckCard.className = 'deck-card';
+                deckCard.innerHTML = `
+                    <h3>📚 ${deck.name}</h3>
+                    <p>${deck.cards.length} cards</p>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-primary" onclick="studyDeck(${folderId}, ${deck.id})">Study</button>
+                        <button class="btn btn-danger" onclick="deleteDeck(${folderId}, ${deck.id})">Delete</button>
+                    </div>
+                `;
+                deckGrid.appendChild(deckCard);
+            });
+
+            if (folder.decks.length === 0) {
+                deckGrid.innerHTML = '<p style="text-align: center; color: #666;">No decks in this folder yet.</p>';
+            }
+        }
+
+        function deleteFolder(folderId) {
+            if (confirm('Are you sure you want to delete this folder and all its decks?')) {
+                appData.folders = appData.folders.filter(f => f.id !== folderId);
+                saveData();
+                updateFoldersDisplay();
+                updateFolderSelects();
+            }
+        }
+
+        function updateFolderSelects() {
+            const folderSelect = document.getElementById('folder-select');
+            const studySelect = document.getElementById('study-deck-select');
+            
+            folderSelect.innerHTML = '<option value="">Select a folder...</option>';
+            studySelect.innerHTML = '<option value="">Choose a deck...</option>';
+
+            appData.folders.forEach(folder => {
+                const option = document.createElement('option');
+                option.value = folder.id;
+                option.textContent = folder.name;
+                folderSelect.appendChild(option);
+
+                folder.decks.forEach(deck => {
+                    const deckOption = document.createElement('option');
+                    deckOption.value = `${folder.id}-${deck.id}`;
+                    deckOption.textContent = `${folder.name} → ${deck.name}`;
+                    studySelect.appendChild(deckOption);
+                });
+            });
+        }
+
+        // Card creation
+        function addCard() {
+            const folderId = parseInt(document.getElementById('folder-select').value);
+            const deckName = document.getElementById('deck-name').value.trim();
+            const front = document.getElementById('card-front').value.trim();
+            const back = document.getElementById('card-back').value.trim();
+
+            if (!folderId || !deckName || !front || !back) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            const folder = appData.folders.find(f => f.id === folderId);
+            if (!folder) return;
+
+            let deck = folder.decks.find(d => d.name === deckName);
+            if (!deck) {
+                deck = {
+                    id: Date.now(),
+                    name: deckName,
+                    cards: [],
+                    created: new Date().toISOString()
+                };
+                folder.decks.push(deck);
+            }
+
+            const card = {
+                id: Date.now() + Math.random(),
+                front: front,
+                back: back,
+                created: new Date().toISOString(),
+                lastStudied: null,
+                correctCount: 0,
+                incorrectCount: 0
+            };
+
+            deck.cards.push(card);
+            saveData();
+            updateFolderSelects();
+            clearCardForm();
+            displayCurrentDeck(folderId, deck.id);
+        }
+
+        function clearCardForm() {
+            document.getElementById('card-front').value = '';
+            document.getElementById('card-back').value = '';
+        }
+
+        function displayCurrentDeck(folderId, deckId) {
+            const folder = appData.folders.find(f => f.id === folderId);
+            if (!folder) return;
+
+            const deck = folder.decks.find(d => d.id === deckId);
+            if (!deck) return;
+
+            const container = document.getElementById('current-deck');
+            container.innerHTML = `
+                <h3>Current Deck: ${deck.name}</h3>
+                <p>${deck.cards.length} cards</p>
+                <div style="max-height: 300px; overflow-y: auto; margin-top: 15px;">
+                    ${deck.cards.map((card, index) => `
+                        <div style="background: #f8f9fa; padding: 10px; margin: 5px 0; border-radius: 8px;">
+                            <strong>Q:</strong> ${card.front}<br>
+                            <strong>A:</strong> ${card.back}
+                            <button class="btn btn-danger" onclick="deleteCard(${folderId}, ${deckId}, ${card.id})" style="float: right; padding: 5px 10px; font-size: 12px;">Delete</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function deleteCard(folderId, deckId, cardId) {
+            const folder = appData.folders.find(f => f.id === folderId);
+            if (!folder) return;
+
+            const deck = folder.decks.find(d => d.id === deckId);
+            if (!deck) return;
+
+            deck.cards = deck.cards.filter(c => c.id !== cardId);
+            saveData();
+            displayCurrentDeck(folderId, deckId);
+        }
+
+        function deleteDeck(folderId, deckId) {
+            if (confirm('Are you sure you want to delete this deck?')) {
+                const folder = appData.folders.find(f => f.id === folderId);
+                if (!folder) return;
+
+                folder.decks = folder.decks.filter(d => d.id !== deckId);
+                saveData();
+                updateFolderSelects();
+                viewFolder(folderId);
+            }
+        }
+
+        // Study modes
+        function loadStudyDeck() {
+            const selection = document.getElementById('study-deck-select').value;
+            if (!selection) {
+                document.getElementById('study-modes').style.display = 'none';
+                return;
+            }
+
+            const [folderId, deckId] = selection.split('-').map(Number);
+            const folder = appData.folders.find(f => f.id === folderId);
+            const deck = folder?.decks.find(d => d.id === deckId);
+
+            if (deck && deck.cards.length > 0) {
+                appData.currentStudyDeck = deck;
+                document.getElementById('study-modes').style.display = 'block';
+                document.getElementById('study-area').innerHTML = '';
+            }
+        }
+
+        function startFlashcardMode() {
+            if (!appData.currentStudyDeck) return;
+
+            appData.currentStudyMode = 'flashcard';
+            appData.currentCardIndex = 0;
+            displayFlashcard();
+        }
+
+        function displayFlashcard() {
+            const deck = appData.currentStudyDeck;
+            const card = deck.cards[appData.currentCardIndex];
+            
+            document.getElementById('study-area').innerHTML = `
+                <div style="text-align: center;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${((appData.currentCardIndex + 1) / deck.cards.length) * 100}%"></div>
+                    </div>
+                    <p>Card ${appData.currentCardIndex + 1} of ${deck.cards.length}</p>
+                    
+                    <div class="flashcard" id="current-flashcard" onclick="flipCard()">
+                        <div class="card-face" id="card-front">
+                            <h3>${card.front}</h3>
+                        </div>
+                        <div class="card-face card-back" id="card-back">
+                            <h3>${card.back}</h3>
+                        </div>
+                    </div>
+
+                    <div class="study-controls">
+                        <button class="btn btn-danger" onclick="markIncorrect()">❌ Incorrect</button>
+                        <button class="btn btn-secondary" onclick="flipCard()">🔄 Flip</button>
+                        <button class="btn btn-success" onclick="markCorrect()">✅ Correct</button>
+                    </div>
+                    
+                    <div class="study-controls">
+                        <button class="btn btn-secondary" onclick="previousCard()">← Previous</button>
+                        <button class="btn btn-secondary" onclick="nextCard()">Next →</button>
+                        <button class="btn btn-secondary" onclick="endStudy()">End Study</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function flipCard() {
+            document.getElementById('current-flashcard').classList.toggle('flipped');
+        }
+
+        function markCorrect() {
+            const card = appData.currentStudyDeck.cards[appData.currentCardIndex];
+            card.correctCount++;
+            card.lastStudied = new Date().toISOString();
+            appData.studyStats.correct++;
+            appData.studyStats.total++;
+            saveData();
+            nextCard();
+        }
+
+        function markIncorrect() {
+            const card = appData.currentStudyDeck.cards[appData.currentCardIndex];
+            card.incorrectCount++;
+            card.lastStudied = new Date().toISOString();
+            appData.studyStats.incorrect++;
+            appData.studyStats.total++;
+            saveData();
+            nextCard();
+        }
+
+        function nextCard() {
+            if (appData.currentCardIndex < appData.currentStudyDeck.cards.length - 1) {
+                appData.currentCardIndex++;
+                displayFlashcard();
+            } else {
+                showStudyComplete();
+            }
+        }
+
+        function previousCard() {
+            if (appData.currentCardIndex > 0) {
+                appData.currentCardIndex--;
+                displayFlashcard();
+            }
+        }
+
+        function startQuizMode() {
+            if (!appData.currentStudyDeck) return;
+
+            appData.currentStudyMode = 'quiz';
+            appData.currentCardIndex = 0;
+            displayQuizCard();
+        }
+
+        function displayQuizCard() {
+            const deck = appData.currentStudyDeck;
+            const card = deck.cards[appData.currentCardIndex];
+            
+            // Generate multiple choice options
+            const correctAnswer = card.back;
+            const otherCards = deck.cards.filter(c => c.id !== card.id);
+            const wrongAnswers = otherCards
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 3)
+                .map(c => c.back);
+            
+            const allChoices = [correctAnswer, ...wrongAnswers]
+                .sort(() => Math.random() - 0.5);
+
+            document.getElementById('study-area').innerHTML = `
+                <div style="text-align: center;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${((appData.currentCardIndex + 1) / deck.cards.length) * 100}%"></div>
+                    </div>
+                    <p>Question ${appData.currentCardIndex + 1} of ${deck.cards.length}</p>
+                    
+                    <div style="background: white; padding: 30px; border-radius: 15px; margin: 20px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        <h3>${card.front}</h3>
+                    </div>
+
+                    <div class="multiple-choice">
+                        ${allChoices.map((choice, index) => `
+                            <button class="choice-btn" onclick="selectAnswer('${choice}', '${correctAnswer}', this)">
+                                ${String.fromCharCode(65 + index)}. ${choice}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div class="study-controls" style="margin-top: 30px;">
+                        <button class="btn btn-secondary" onclick="nextQuizCard()" id="next-quiz-btn" style="display: none;">Next Question</button>
+                        <button class="btn btn-secondary" onclick="endStudy()">End Quiz</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectAnswer(selected, correct, button) {
+            const choices = document.querySelectorAll('.choice-btn');
+            choices.forEach(choice => {
+                choice.disabled = true;
+                if (choice.textContent.substring(3) === correct) {
+                    choice.classList.add('correct');
+                } else if (choice === button && selected !== correct) {
+                    choice.classList.add('incorrect');
+                }
+            });
+
+            const card = appData.currentStudyDeck.cards[appData.currentCardIndex];
+            if (selected === correct) {
+                card.correctCount++;
+                appData.studyStats.correct++;
+            } else {
+                card.incorrectCount++;
+                appData.studyStats.incorrect++;
+            }
+            
+            card.lastStudied = new Date().toISOString();
+            appData.studyStats.total++;
+            saveData();
+
+            document.getElementById('next-quiz-btn').style.display = 'inline-block';
+        }
+
+        function nextQuizCard() {
+            if (appData.currentCardIndex < appData.currentStudyDeck.cards.length - 1) {
+                appData.currentCardIndex++;
+                displayQuizCard();
+            } else {
+                showStudyComplete();
+            }
+        }
+
+        function startMatchMode() {
+            if (!appData.currentStudyDeck) return;
+
+            appData.currentStudyMode = 'match';
+            displayMatchGame();
+        }
+
+        function displayMatchGame() {
+            const deck = appData.currentStudyDeck;
+            const cards = deck.cards.slice(0, Math.min(8, deck.cards.length)); // Limit to 8 pairs
+            
+            const matchItems = [];
+            cards.forEach(card => {
+                matchItems.push({ id: card.id + '_front', text: card.front, pair: card.id, type: 'front' });
+                matchItems.push({ id: card.id + '_back', text: card.back, pair: card.id, type: 'back' });
+            });
+            
+            matchItems.sort(() => Math.random() - 0.5);
+
+            document.getElementById('study-area').innerHTML = `
+                <div style="text-align: center;">
+                    <h3>Match the pairs!</h3>
+                    <p>Click on a question and its matching answer</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+                        ${matchItems.map(item => `
+                            <button class="choice-btn match-item" data-id="${item.id}" data-pair="${item.pair}" onclick="selectMatchItem(this)">
+                                ${item.text}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div class="study-controls">
+                        <button class="btn btn-secondary" onclick="resetMatchGame()">Reset</button>
+                        <button class="btn btn-secondary" onclick="endStudy()">End Match</button>
+                    </div>
+                    
+                    <div id="match-score" style="margin-top: 20px;">
+                        <p>Matches: <span id="match-count">0</span> / ${cards.length}</p>
+                    </div>
+                </div>
+            `;
+
+            window.matchState = {
+                selected: null,
+                matches: 0,
+                totalPairs: cards.length
+            };
+        }
+
+        function selectMatchItem(button) {
+            if (button.classList.contains('correct')) return;
+
+            if (!window.matchState.selected) {
+                window.matchState.selected = button;
+                button.style.background = '#e3f2fd';
+                button.style.borderColor = '#2196f3';
+            } else {
+                const first = window.matchState.selected;
+                const second = button;
+
+                if (first.dataset.pair === second.dataset.pair && first !== second) {
+                    // Correct match
+                    first.classList.add('correct');
+                    second.classList.add('correct');
+                    first.disabled = true;
+                    second.disabled = true;
+                    
+                    window.matchState.matches++;
+                    document.getElementById('match-count').textContent = window.matchState.matches;
+                    
+                    appData.studyStats.correct++;
+                    appData.studyStats.total++;
+
+                    if (window.matchState.matches === window.matchState.totalPairs) {
+                        setTimeout(() => {
+                            alert('Congratulations! You matched all pairs!');
+                            showStudyComplete();
+                        }, 500);
+                    }
+                } else {
+                    // Incorrect match
+                    first.classList.add('incorrect');
+                    second.classList.add('incorrect');
+                    appData.studyStats.incorrect++;
+                    appData.studyStats.total++;
+                    
+                    setTimeout(() => {
+                        first.classList.remove('incorrect');
+                        second.classList.remove('incorrect');
+                        first.style.background = '';
+                        first.style.borderColor = '';
+                        second.style.background = '';
+                        second.style.borderColor = '';
+                    }, 1000);
+                }
+
+                window.matchState.selected = null;
+                saveData();
+            }
+        }
+
+        function resetMatchGame() {
+            displayMatchGame();
+        }
+
+        function startWriteMode() {
+            if (!appData.currentStudyDeck) return;
+
+            appData.currentStudyMode = 'write';
+            appData.currentCardIndex = 0;
+            displayWriteCard();
+        }
+
+        function displayWriteCard() {
+            const deck = appData.currentStudyDeck;
+            const card = deck.cards[appData.currentCardIndex];
+
+            document.getElementById('study-area').innerHTML = `
+                <div style="text-align: center;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${((appData.currentCardIndex + 1) / deck.cards.length) * 100}%"></div>
+                    </div>
+                    <p>Question ${appData.currentCardIndex + 1} of ${deck.cards.length}</p>
+                    
+                    <div style="background: white; padding: 30px; border-radius: 15px; margin: 20px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        <h3>${card.front}</h3>
+                    </div>
+
+                    <div class="input-group" style="max-width: 500px; margin: 0 auto;">
+                        <label>Your Answer:</label>
+                        <textarea id="write-answer" rows="4" placeholder="Type your answer here..." style="font-size: 16px;"></textarea>
+                    </div>
+
+                    <div class="study-controls">
+                        <button class="btn btn-primary" onclick="checkWriteAnswer()">Check Answer</button>
+                        <button class="btn btn-secondary" onclick="showWriteAnswer()">Show Answer</button>
+                        <button class="btn btn-secondary" onclick="endStudy()">End Study</button>
+                    </div>
+
+                    <div id="write-result" style="margin-top: 20px;"></div>
+                </div>
+            `;
+        }
+
+        function checkWriteAnswer() {
+            const userAnswer = document.getElementById('write-answer').value.trim().toLowerCase();
+            const correctAnswer = appData.currentStudyDeck.cards[appData.currentCardIndex].back.toLowerCase();
+            
+            const isCorrect = userAnswer.includes(correctAnswer) || correctAnswer.includes(userAnswer);
+            
+            document.getElementById('write-result').innerHTML = `
+                <div style="background: ${isCorrect ? '#d4edda' : '#f8d7da'}; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <h4>${isCorrect ? '✅ Correct!' : '❌ Not quite right'}</h4>
+                    <p><strong>Correct Answer:</strong> ${appData.currentStudyDeck.cards[appData.currentCardIndex].back}</p>
+                    <p><strong>Your Answer:</strong> ${document.getElementById('write-answer').value}</p>
+                    
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-success" onclick="markWriteCorrect()">I was right</button>
+                        <button class="btn btn-danger" onclick="markWriteIncorrect()">I was wrong</button>
+                        <button class="btn btn-primary" onclick="nextWriteCard()">Next Question</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showWriteAnswer() {
+            document.getElementById('write-result').innerHTML = `
+                <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <h4>💡 Answer</h4>
+                    <p><strong>${appData.currentStudyDeck.cards[appData.currentCardIndex].back}</strong></p>
+                    
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-success" onclick="markWriteCorrect()">Got it right</button>
+                        <button class="btn btn-danger" onclick="markWriteIncorrect()">Need more practice</button>
+                        <button class="btn btn-primary" onclick="nextWriteCard()">Next Question</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function markWriteCorrect() {
+            const card = appData.currentStudyDeck.cards[appData.currentCardIndex];
+            card.correctCount++;
+            card.lastStudied = new Date().toISOString();
+            appData.studyStats.correct++;
+            appData.studyStats.total++;
+            saveData();
+        }
+
+        function markWriteIncorrect() {
+            const card = appData.currentStudyDeck.cards[appData.currentCardIndex];
+            card.incorrectCount++;
+            card.lastStudied = new Date().toISOString();
+            appData.studyStats.incorrect++;
+            appData.studyStats.total++;
+            saveData();
+        }
+
+        function nextWriteCard() {
+            if (appData.currentCardIndex < appData.currentStudyDeck.cards.length - 1) {
+                appData.currentCardIndex++;
+                displayWriteCard();
+            } else {
+                showStudyComplete();
+            }
+        }
+
+        function showStudyComplete() {
+            const accuracy = appData.studyStats.total > 0 ? 
+                Math.round((appData.studyStats.correct / appData.studyStats.total) * 100) : 0;
+
+            document.getElementById('study-area').innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h2>🎉 Study Session Complete!</h2>
+                    
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-number">${appData.studyStats.total}</div>
+                            <div>Total Cards</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: #28a745;">${appData.studyStats.correct}</div>
+                            <div>Correct</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: #dc3545;">${appData.studyStats.incorrect}</div>
+                            <div>Incorrect</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" style="color: #667eea;">${accuracy}%</div>
+                            <div>Accuracy</div>
+                        </div>
+                    </div>
+
+                    <div class="study-controls" style="margin-top: 30px;">
+                        <button class="btn btn-primary" onclick="restartStudy()">Study Again</button>
+                        <button class="btn btn-secondary" onclick="endStudy()">Finish</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function restartStudy() {
+            appData.studyStats = { correct: 0, incorrect: 0, total: 0 };
+            appData.currentCardIndex = 0;
+            
+            if (appData.currentStudyMode === 'flashcard') {
+                startFlashcardMode();
+            } else if (appData.currentStudyMode === 'quiz') {
+                startQuizMode();
+            } else if (appData.currentStudyMode === 'match') {
+                startMatchMode();
+            } else if (appData.currentStudyMode === 'write') {
+                startWriteMode();
+            }
+        }
+
+        function endStudy() {
+            appData.studyStats = { correct: 0, incorrect: 0, total: 0 };
+            document.getElementById('study-area').innerHTML = '';
+            document.getElementById('study-modes').style.display = 'none';
+            document.getElementById('study-deck-select').value = '';
+        }
+
+        // Cloud sync functions
+        function connectCloud(provider) {
+            // Simulate cloud connection
+            appData.cloudConnections[provider] = !appData.cloudConnections[provider];
+            
+            const statusElement = document.getElementById(provider + '-status');
+            const providerElement = statusElement.parentElement;
+            
+            if (appData.cloudConnections[provider]) {
+                statusElement.textContent = 'Connected ✅';
+                providerElement.classList.add('connected');
+                alert(`Connected to ${provider.charAt(0).toUpperCase() + provider.slice(1)}!`);
+            } else {
+                statusElement.textContent = 'Not Connected';
+                providerElement.classList.remove('connected');
+                alert(`Disconnected from ${provider.charAt(0).toUpperCase() + provider.slice(1)}`);
+            }
+            
+            saveData();
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(appData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `flashcards_backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            const file = document.getElementById('import-file').files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    if (confirm('This will replace all your current data. Are you sure?')) {
+                        appData = importedData;
+                        saveData();
+                        updateFoldersDisplay();
+                        updateFolderSelects();
+                        alert('Data imported successfully!');
+                    }
+                } catch (error) {
+                    alert('Error importing data. Please check the file format.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function syncAll() {
+            const connectedProviders = Object.keys(appData.cloudConnections)
+                .filter(provider => appData.cloudConnections[provider]);
+            
+            if (connectedProviders.length === 0) {
+                alert('No cloud providers connected. Please connect to at least one cloud service.');
+                return;
+            }
+
+            // Simulate sync
+            alert(`Syncing with ${connectedProviders.join(', ')}...`);
+            setTimeout(() => {
+                alert('Sync completed successfully!');
+            }, 2000);
+        }
+
+        // Data persistence
+        function saveData() {
+            try {
+                const dataStr = JSON.stringify(appData);
+                const compressedData = btoa(dataStr); // Simple compression
+                document.cookie = `flashcardData=${compressedData}; expires=Thu, 18 Dec 2025 12:00:00 UTC; path=/`;
+            } catch (error) {
+                console.error('Error saving data:', error);
+            }
+        }
+
+        function loadData() {
+            try {
+                const cookies = document.cookie.split(';');
+                const dataCookie = cookies.find(cookie => cookie.trim().startsWith('flashcardData='));
+                
+                if (dataCookie) {
+                    const compressedData = dataCookie.split('=')[1];
+                    const dataStr = atob(compressedData);
+                    const loadedData = JSON.parse(dataStr);
+                    
+                    // Merge with default structure
+                    appData = {
+                        ...appData,
+                        ...loadedData
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                // Keep default data if loading fails
+            }
+        }
+
+        function studyDeck(folderId, deckId) {
+            const folder = appData.folders.find(f => f.id === folderId);
+            const deck = folder?.decks.find(d => d.id === deckId);
+            
+            if (deck) {
+                document.getElementById('study-deck-select').value = `${folderId}-${deckId}`;
+                appData.currentStudyDeck = deck;
+                showTab('study');
+                document.getElementById('study-modes').style.display = 'block';
+            }
+        }
+
+        // Initialize the app when page loads
+        window.addEventListener('load', initApp);
+
+        // Auto-save every 30 seconds
+        setInterval(saveData, 30000);
+    </script>
+</body>
+</html>

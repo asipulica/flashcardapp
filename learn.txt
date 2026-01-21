@@ -1,0 +1,54 @@
+<script src="https://apis.google.com/js/api.js"></script>
+this is the library for calling apis
+<script src="https://accounts.google.com/gsi/client></script>
+for sign in and authorization
+
+google drive configuration
+const google_config={
+    client_id:the id of the applization in google cloud
+    API_KEY:
+    Discovery_doc:map of google drive api
+    Scopes: its about persmissions
+}
+
+client id is for every application you made in google cloud console
+discovery_doc is a map of google drive api 
+1.what functions are available
+2.how to call those options
+
+scopes: it defines persmessions like accessing to something
+
+what we need for this flashcard:
+.gapi:?
+.google :?
+.tokenClient:?
+.isGoogleApiLoaded:?
+
+initializing google api 
+
+async func
+    try
+        gapi.load
+loads the main client component
+
+gapi.client.init
+with api_key tries to understand where 
+is the API map
+
+google.accounts.oauth2
+it uses tokenclient and clientid and scopes
+ 
+callback:
+successful message after logging in
+
+1.writing scripts for accessing the google api library and sign in
+2.storing all the data for identifying the application to google 
+3.importing libraries
+4.initializing google api
+5.connect to google drive
+6.save flashcareds to google drive
+7.load flashcards from google drive
+8.update google drive connection status
+9.auto-sync functions
+10.
+
